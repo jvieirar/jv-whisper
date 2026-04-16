@@ -22,7 +22,7 @@ import {
   searchTranscriptions
 } from './database'
 import { getSetting, setSetting, getAllSettings, Settings } from './store'
-import { shortcutEmitter, restartShortcutListener } from './shortcuts'
+import { shortcutEmitter, restartShortcutListener, startHotkeyCapture, stopHotkeyCapture } from './shortcuts'
 import { setTrayState, setLatestTranscription } from './tray'
 
 const SESSION_ID = randomUUID()
@@ -168,5 +168,17 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
 
   shortcutEmitter.on('accessibilityError', () => {
     mainWindow.webContents.send('accessibility-error')
+  })
+
+  // ── Hotkey capture ─────────────────────────────────────────────────────────
+  ipcMain.handle('start-hotkey-capture', () => startHotkeyCapture())
+  ipcMain.handle('stop-hotkey-capture', () => stopHotkeyCapture())
+
+  shortcutEmitter.on('hotkeyCaptureUpdate', (combo: string) => {
+    mainWindow.webContents.send('hotkey-capture-update', combo)
+  })
+
+  shortcutEmitter.on('hotkeyCaptured', (combo: string) => {
+    mainWindow.webContents.send('hotkey-captured', combo)
   })
 }

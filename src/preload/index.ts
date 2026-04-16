@@ -110,6 +110,20 @@ const api = {
   onAccessibilityError: (cb: () => void) => {
     ipcRenderer.on('accessibility-error', cb)
     return () => ipcRenderer.off('accessibility-error', cb)
+  },
+
+  // ── Hotkey capture ─────────────────────────────────────────────────────────
+  startHotkeyCapture: () => ipcRenderer.invoke('start-hotkey-capture'),
+  stopHotkeyCapture: () => ipcRenderer.invoke('stop-hotkey-capture'),
+  onHotkeyCaptureUpdate: (cb: (combo: string) => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, combo: string) => cb(combo)
+    ipcRenderer.on('hotkey-capture-update', handler)
+    return () => ipcRenderer.off('hotkey-capture-update', handler)
+  },
+  onHotkeyCaptured: (cb: (combo: string) => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, combo: string) => cb(combo)
+    ipcRenderer.on('hotkey-captured', handler)
+    return () => ipcRenderer.off('hotkey-captured', handler)
   }
 }
 

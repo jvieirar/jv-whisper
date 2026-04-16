@@ -1,5 +1,100 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Settings } from '../../../preload/index'
+
+// ── Hotkey recorder widget ─────────────────────────────────────────────────
+type RecorderState = 'idle' | 'recording' | 'confirming'
+
+function HotkeyRecorder({
+  value,
+  onChange
+}: {
+  value: string
+  onChange: (combo: string) => void
+}) {
+  const [state, setState] = useState<RecorderState>('idle')
+  const [liveCombo, setLiveCombo] = useState('')
+  const [flash, setFlash] = useState(false)
+  const unsubRef = useRef<(() => void)[]>([])
+
+  const stopCapture = useCallback((cancel = false) => {
+    window.api.stopHotkeyCapture()
+    unsubRef.current.forEach((fn) => fn())
+    unsubRef.current = []
+    setState('idle')
+    setLiveCombo('')
+    if (cancel) return
+  }, [])
+
+  const startCapture = useCallback(() => {
+    setState('recording')
+    setLiveCombo('')
+    window.api.startHotkeyCapture()
+
+    const u1 = window.api.onHotkeyCaptureUpdate((combo) => {
+      setLiveCombo(combo)
+      setState('recording')
+    })
+    const u2 = window.api.onHotkeyCaptured((combo) => {
+      unsubRef.current.forEach((fn) => fn())
+      unsubRef.current = []
+      setState('confirming')
+      setLiveCombo(combo)
+      onChange(combo)
+      setFlash(true)
+      setTimeout(() => {
+        setFlash(false)
+        setState('idle')
+        setLiveCombo('')
+      }, 800)
+    })
+    unsubRef.current = [u1, u2]
+  }, [onChange])
+
+  // Clean up on unmount
+  useEffect(() => () => stopCapture(true), [stopCapture])
+
+  if (state === 'idle') {
+    return (
+      <button
+        onClick={startCapture}
+        className="flex items-center gap-2 bg-surface-700 border border-white/10 hover:border-white/25 rounded-lg px-3 py-1.5 text-sm text-gray-200 w-44 justify-center transition-colors group"
+      >
+        <span className="font-mono">{value || '—'}</span>
+        <span className="text-gray-600 group-hover:text-gray-400 text-xs">✎</span>
+      </button>
+    )
+  }
+
+  if (state === 'confirming') {
+    return (
+      <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 w-44 justify-center border transition-all ${flash ? 'bg-green-500/15 border-green-500/40' : 'bg-surface-700 border-white/10'}`}>
+        <span className="text-green-400 text-xs font-mono">{liveCombo}</span>
+        {flash && <span className="text-green-400 text-xs">✓</span>}
+      </div>
+    )
+  }
+
+  // recording
+  return (
+    <div className="flex flex-col items-end gap-1 w-44">
+      <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/40 rounded-lg px-3 py-1.5 w-full justify-center">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+        <span className="font-mono text-sm text-amber-300">
+          {liveCombo || 'Press keys…'}
+        </span>
+      </div>
+      <div className="flex items-center justify-between w-full px-0.5">
+        <span className="text-[10px] text-gray-600">Release all keys to confirm</span>
+        <button
+          onClick={() => stopCapture(true)}
+          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          cancel
+        </button>
+      </div>
+    </div>
+  )
+}
 
 type CheckState = 'idle' | 'checking' | 'ok' | 'error'
 
@@ -96,14 +191,12 @@ export default function Settings({ onOpenSetup }: Props) {
             <div>
               <label className="text-sm text-gray-200">Hotkey</label>
               <p className="text-xs text-gray-600 mt-0.5">
-                Key combo to trigger recording (e.g. <code className="text-gray-500">Control+Space</code>)
+                Click to record a new key combination
               </p>
             </div>
-            <input
-              type="text"
+            <HotkeyRecorder
               value={settings.hotkey}
-              onChange={(e) => updateSetting('hotkey', e.target.value)}
-              className="bg-surface-700 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-200 w-40 text-center focus:outline-none focus:border-white/25"
+              onChange={(combo) => updateSetting('hotkey', combo)}
             />
           </div>
 
