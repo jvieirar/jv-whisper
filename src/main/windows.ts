@@ -1,4 +1,4 @@
-import { BrowserWindow, shell, app } from 'electron'
+import { BrowserWindow, shell, app, nativeTheme } from 'electron'
 import { join } from 'path'
 
 const DEV = process.env['NODE_ENV'] === 'development'
@@ -13,7 +13,7 @@ export function createMainWindow(): BrowserWindow {
     frame: true,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 14 },
-    backgroundColor: '#0f0f14',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0f0f14' : '#ffffff',
     vibrancy: 'under-window',
     visualEffectState: 'active',
     webPreferences: {

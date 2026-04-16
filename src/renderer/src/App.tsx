@@ -15,6 +15,7 @@ export default function App() {
   const [newRecord, setNewRecord] = useState<TranscriptionRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [accessibilityWarning, setAccessibilityWarning] = useState(false)
+  const [pasteWarning, setPasteWarning] = useState<string | null>(null)
   const [parsingWarning, setParsingWarning] = useState<string | null>(null)
   const [screen, setScreen] = useState<Screen>('loading')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -81,6 +82,13 @@ export default function App() {
     }
   }, [])
 
+  // Apply initial dark/light mode class before first render
+  useEffect(() => {
+    window.api.getNativeTheme().then((isDark) => {
+      document.body.classList.toggle('dark', isDark)
+    })
+  }, [])
+
   // Check setup status on launch
   useEffect(() => {
     window.api.setupStatus().then((status) => {
@@ -109,8 +117,16 @@ export default function App() {
       setAccessibilityWarning(true)
     })
 
+    const offPaste = window.api.onPasteFailed((msg) => {
+      setPasteWarning(msg)
+    })
+
     const offParsingFailed = window.api.onAdvancedParsingFailed((msg) => {
       setParsingWarning(`Advanced parsing failed — showing raw transcript. ${msg}`)
+    })
+
+    const offTheme = window.api.onThemeChanged(({ isDark }) => {
+      document.body.classList.toggle('dark', isDark)
     })
 
     return () => {
@@ -120,7 +136,9 @@ export default function App() {
       offComplete()
       offError()
       offAccess()
+      offPaste()
       offParsingFailed()
+      offTheme()
     }
   }, [startRecording, stopRecording])
 
@@ -183,11 +201,26 @@ export default function App() {
             <span className="text-amber-400/70 text-xs">
               System Settings → Privacy &amp; Security → Accessibility → enable jv-whisper (or Terminal)
             </span>
+            <br />
+            <button
+              onClick={() => window.api.openAccessibilitySettings()}
+              className="mt-1.5 text-xs px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 transition-colors"
+            >
+              Open Accessibility Settings
+            </button>
           </span>
           <button
             onClick={() => setAccessibilityWarning(false)}
             className="text-amber-500 hover:text-amber-300 shrink-0"
           >✕</button>
+        </div>
+      )}
+
+      {/* Paste failure warning */}
+      {pasteWarning && (
+        <div className="mx-4 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-sm flex justify-between items-start">
+          <span>⚠️ Paste failed: {pasteWarning}</span>
+          <button onClick={() => setPasteWarning(null)} className="ml-3 text-amber-500 hover:text-amber-300">✕</button>
         </div>
       )}
 
