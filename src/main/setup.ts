@@ -20,6 +20,17 @@ const PYTHON_CANDIDATES = [
   'python'
 ]
 
+/** Env with augmented PATH so subprocesses can find ffmpeg, brew tools, etc. */
+function makeEnv(extra?: Record<string, string>): NodeJS.ProcessEnv {
+  const augmentedPath = [
+    process.env.PATH,
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/opt/local/bin'
+  ].filter(Boolean).join(':')
+  return { ...process.env, PATH: augmentedPath, ...extra }
+}
+
 export interface SetupStatus {
   pythonFound: boolean
   pythonPath: string
@@ -139,7 +150,7 @@ export function downloadModel(model: string, onLog: LogCallback): Promise<void> 
     onLog(`⬇️  Downloading model: ${model}`)
     onLog('   (first download may take a few minutes — cached for next launch)')
 
-    const proc = spawn(venvPython, [scriptPath, model])
+    const proc = spawn(venvPython, [scriptPath, model], { env: makeEnv() })
 
     proc.stdout.on('data', (d) => {
       const line = d.toString().trim()

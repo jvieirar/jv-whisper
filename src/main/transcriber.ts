@@ -21,7 +21,18 @@ export async function transcribeAudio(audioFilePath: string): Promise<Transcript
       : join(app.getAppPath(), 'scripts', 'transcribe.py')
 
     const start = Date.now()
-    const env = { ...process.env, ...(hfToken ? { HF_TOKEN: hfToken } : {}) }
+    // Packaged app gets minimal PATH — add Homebrew/common paths so Python can find ffmpeg
+    const augmentedPath = [
+      process.env.PATH,
+      '/opt/homebrew/bin',
+      '/usr/local/bin',
+      '/opt/local/bin'
+    ].filter(Boolean).join(':')
+    const env = {
+      ...process.env,
+      PATH: augmentedPath,
+      ...(hfToken ? { HF_TOKEN: hfToken } : {})
+    }
     const proc = spawn(pythonPath, [scriptPath, audioFilePath, model], { env })
 
     let stdout = ''
