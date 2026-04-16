@@ -111,6 +111,19 @@ const api = {
     ipcRenderer.on('accessibility-error', cb)
     return () => ipcRenderer.off('accessibility-error', cb)
   },
+  openAccessibilitySettings: () =>
+    ipcRenderer.invoke('open-accessibility-settings'),
+  onPasteFailed: (cb: (msg: string) => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, msg: string) => cb(msg)
+    ipcRenderer.on('paste-failed', handler)
+    return () => ipcRenderer.off('paste-failed', handler)
+  },
+  onThemeChanged: (cb: (payload: { isDark: boolean }) => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, payload: { isDark: boolean }) => cb(payload)
+    ipcRenderer.on('theme-changed', handler)
+    return () => ipcRenderer.off('theme-changed', handler)
+  },
+  getNativeTheme: (): Promise<boolean> => ipcRenderer.invoke('get-native-theme'),
 
   // ── Hotkey capture ─────────────────────────────────────────────────────────
   startHotkeyCapture: () => ipcRenderer.invoke('start-hotkey-capture'),

@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, clipboard } from 'electron'
+import { ipcMain, BrowserWindow, clipboard, shell, nativeTheme } from 'electron'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -50,6 +50,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
           finalText = await runAdvancedParsing(result.text)
         } catch (err) {
           console.error('[ipc] Advanced parsing failed:', err)
+          mainWindow.webContents.send('advanced-parsing-failed', err instanceof Error ? err.message : 'Unknown error')
           // Fall back to raw whisper output
         }
       }
@@ -58,16 +59,25 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       // save current clipboard → set transcription → Cmd+V → restore (unless user wants to keep it)
       const previousClipboard = clipboard.readText()
       clipboard.writeText(finalText)
-      await new Promise<void>((res) =>
+      await new Promise<void>((res, rej) =>
         execFile(
           'osascript',
           ['-e', 'tell application "System Events" to keystroke "v" using {command down}'],
-          () => res()
+          (err) => {
+            if (err) {
+              mainWindow.webContents.send('paste-failed', err.message)
+              rej(err)
+            } else {
+              res()
+            }
+          }
         )
-      )
+      ).catch(() => {
+        // paste-failed event already sent; continue to save transcription
+      })
       if (!getSetting('autoCopyToClipboard')) {
-        // Small delay so the paste lands before we restore
-        setTimeout(() => clipboard.writeText(previousClipboard), 200)
+        // Delay so the paste lands before we restore
+        setTimeout(() => clipboard.writeText(previousClipboard), 500)
       }
 
       setLatestTranscription(finalText)
@@ -181,4 +191,12 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   shortcutEmitter.on('hotkeyCaptured', (combo: string) => {
     mainWindow.webContents.send('hotkey-captured', combo)
   })
+
+  // ── Accessibility settings shortcut ────────────────────────────────────────
+  ipcMain.handle('open-accessibility-settings', () => {
+    shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility')
+  })
+
+  // ── Theme ──────────────────────────────────────────────────────────────────
+  ipcMain.handle('get-native-theme', () => nativeTheme.shouldUseDarkColors)
 }
