@@ -304,6 +304,29 @@ export default function Settings({ onOpenSetup }: Props) {
         </div>
       </section>
 
+      {/* ── API Tokens ──────────────────────────────────────────────── */}
+      <section>
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
+          API Tokens
+        </h2>
+        <div className="glass rounded-xl p-4 space-y-3">
+          <div>
+            <label className="text-sm text-gray-200">HuggingFace Token</label>
+            <p className="text-xs text-gray-600 mt-0.5">
+              Optional. Enables higher rate limits when downloading models.{' '}
+              <span className="text-gray-500">Get one free at huggingface.co/settings/tokens</span>
+            </p>
+            <input
+              type="password"
+              value={settings.hfToken}
+              onChange={(e) => updateSetting('hfToken', e.target.value)}
+              placeholder="hf_xxxxxxxxxxxxxxxx"
+              className="mt-2 w-full bg-surface-700 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-white/25 font-mono"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* ── Setup / Repair ──────────────────────────────────────────── */}
       <section className="pb-6">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">

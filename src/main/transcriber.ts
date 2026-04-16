@@ -13,6 +13,7 @@ export async function transcribeAudio(audioFilePath: string): Promise<Transcript
   return new Promise((resolve, reject) => {
     const pythonPath = getSetting('whisperPythonPath')
     const model = getSetting('whisperModel')
+    const hfToken = getSetting('hfToken')
 
     // In packaged app, scripts live in extraResources; in dev, relative to project root
     const scriptPath = app.isPackaged
@@ -20,7 +21,8 @@ export async function transcribeAudio(audioFilePath: string): Promise<Transcript
       : join(app.getAppPath(), 'scripts', 'transcribe.py')
 
     const start = Date.now()
-    const proc = spawn(pythonPath, [scriptPath, audioFilePath, model])
+    const env = { ...process.env, ...(hfToken ? { HF_TOKEN: hfToken } : {}) }
+    const proc = spawn(pythonPath, [scriptPath, audioFilePath, model], { env })
 
     let stdout = ''
     let stderr = ''

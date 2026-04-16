@@ -1,4 +1,4 @@
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow, shell, app } from 'electron'
 import { join } from 'path'
 
 const DEV = process.env['NODE_ENV'] === 'development'
@@ -24,7 +24,12 @@ export function createMainWindow(): BrowserWindow {
     }
   })
 
-  // Closing hides the window rather than quitting (tray app behavior)
+  // Show in Dock + cmd+tab when window is visible, hide when it's not.
+  // This makes it behave like a proper app when open, but disappear when closed.
+  win.on('show', () => app.dock?.show())
+  win.on('hide', () => app.dock?.hide())
+
+  // Red close button hides rather than quits (tray app behavior)
   win.on('close', (e) => {
     e.preventDefault()
     win.hide()

@@ -67,11 +67,18 @@ def main():
             print(f"[warn] ffmpeg conversion failed: {e}", file=sys.stderr)
 
     try:
-        result = mlx_whisper.transcribe(
-            wav_path,
-            path_or_hf_repo=model,
-            verbose=False,
-        )
+        import io
+        import contextlib
+
+        # mlx_whisper prints "Detected language: X" to stdout even with verbose=False.
+        # Capture all of its stdout so only our JSON reaches the caller.
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            result = mlx_whisper.transcribe(
+                wav_path,
+                path_or_hf_repo=model,
+                verbose=False,
+            )
 
         output = {
             "text": result["text"].strip(),

@@ -21,6 +21,7 @@ export interface Settings {
   soundEnabled: boolean
   autoCopyToClipboard: boolean
   theme: 'system' | 'light' | 'dark'
+  hfToken: string
 }
 
 const api = {

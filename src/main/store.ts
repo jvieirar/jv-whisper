@@ -10,6 +10,7 @@ export interface Settings {
   soundEnabled: boolean
   autoCopyToClipboard: boolean
   theme: 'system' | 'light' | 'dark'
+  hfToken: string
 }
 
 const defaults: Settings = {
@@ -21,7 +22,8 @@ const defaults: Settings = {
   advancedParsingModel: '',
   soundEnabled: true,
   autoCopyToClipboard: true,
-  theme: 'system'
+  theme: 'system',
+  hfToken: ''
 }
 
 let store: ElectronStore<Settings>
@@ -52,6 +54,7 @@ export function getAllSettings(): Settings {
     advancedParsingModel: store.get('advancedParsingModel'),
     soundEnabled: store.get('soundEnabled'),
     autoCopyToClipboard: store.get('autoCopyToClipboard'),
-    theme: store.get('theme')
+    theme: store.get('theme'),
+    hfToken: store.get('hfToken')
   }
 }
