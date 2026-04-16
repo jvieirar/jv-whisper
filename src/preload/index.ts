@@ -54,6 +54,31 @@ const api = {
   getOllamaModels: (): Promise<Array<{ name: string; size: number; modified_at: string }>> =>
     ipcRenderer.invoke('get-ollama-models'),
 
+  // ── Setup ──────────────────────────────────────────────────────────────────
+  setupStatus: (): Promise<{
+    pythonFound: boolean
+    pythonPath: string
+    venvExists: boolean
+    packagesInstalled: boolean
+    venvPython: string
+  }> => ipcRenderer.invoke('setup-status'),
+
+  setupFindPython: (): Promise<string | null> =>
+    ipcRenderer.invoke('setup-find-python'),
+
+  setupInstall: (pythonPath: string): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('setup-install', pythonPath),
+
+  setupDownloadModel: (model: string): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('setup-download-model', model),
+
+  onSetupLog: (cb: (entry: { msg: string; type?: 'info' | 'success' | 'error' }) => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, entry: { msg: string; type?: string }) =>
+      cb(entry as { msg: string; type?: 'info' | 'success' | 'error' })
+    ipcRenderer.on('setup-log', handler)
+    return () => ipcRenderer.off('setup-log', handler)
+  },
+
   // ── Events from main process ───────────────────────────────────────────────
   onRecordStart: (cb: () => void) => {
     ipcRenderer.on('record-start', cb)

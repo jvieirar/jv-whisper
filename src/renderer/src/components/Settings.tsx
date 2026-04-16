@@ -23,7 +23,11 @@ function StatusBadge({ state, label }: StatusBadgeProps) {
   )
 }
 
-export default function Settings() {
+interface Props {
+  onOpenSetup: () => void
+}
+
+export default function Settings({ onOpenSetup }: Props) {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [whisperStatus, setWhisperStatus] = useState<CheckState>('idle')
   const [whisperVersion, setWhisperVersion] = useState('')
@@ -300,30 +304,24 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* ── Preferences ─────────────────────────────────────────────── */}
+      {/* ── Setup / Repair ──────────────────────────────────────────── */}
       <section className="pb-6">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
-          Preferences
+          Installation
         </h2>
-        <div className="glass rounded-xl p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="text-sm text-gray-200">Theme</label>
-            <div className="flex rounded-lg overflow-hidden border border-white/10">
-              {(['system', 'light', 'dark'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => updateSetting('theme', t)}
-                  className={`px-3 py-1.5 text-sm transition-all ${
-                    settings.theme === t
-                      ? 'bg-white/15 text-white'
-                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
+        <div className="glass rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-200">Re-run setup wizard</p>
+            <p className="text-xs text-gray-600 mt-0.5">
+              Reinstall the Python environment or re-download the Whisper model.
+            </p>
           </div>
+          <button
+            onClick={onOpenSetup}
+            className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all shrink-0"
+          >
+            Open setup →
+          </button>
         </div>
       </section>
     </div>

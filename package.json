@@ -9,6 +9,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
     "package": "npm run build && electron-builder",
     "package:mac": "npm run build && electron-builder --mac --arm64",
     "package:mac:universal": "npm run build && electron-builder --mac --universal"
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
+    "@electron/rebuild": "^3.6.0",
     "@types/better-sqlite3": "^7.6.8",
     "@types/node": "^20.14.2",
     "@types/react": "^18.3.1",

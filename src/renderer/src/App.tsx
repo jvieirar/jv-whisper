@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import History from './components/History'
 import Settings from './components/Settings'
+import Setup from './components/Setup'
 import RecordingIndicator from './components/RecordingIndicator'
 import type { TranscriptionRecord } from '../../preload/index'
 
 type Tab = 'history' | 'settings'
 type AppState = 'idle' | 'recording' | 'processing'
+type Screen = 'loading' | 'setup' | 'app'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('history')
   const [appState, setAppState] = useState<AppState>('idle')
   const [newRecord, setNewRecord] = useState<TranscriptionRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [screen, setScreen] = useState<Screen>('loading')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const streamRef = useRef<MediaStream | null>(null)
@@ -70,7 +73,35 @@ export default function App() {
     // transcription-complete event will handle the rest
   }, [])
 
-  // Listen for hotkey events from main process
+  // Check setup status on launch
+  useEffect(() => {
+    window.api.setupStatus().then((status) => {
+      if (status.packagesInstalled) {
+        setScreen('app')
+      } else {
+        setScreen('setup')
+      }
+    })
+  }, [])
+
+  if (screen === 'loading') {
+    return (
+      <div className="flex items-center justify-center h-full bg-surface-900 text-gray-600 text-sm">
+        Starting…
+      </div>
+    )
+  }
+
+  if (screen === 'setup') {
+    return (
+      <Setup
+        onComplete={() => setScreen('app')}
+        onSkip={() => setScreen('app')}
+      />
+    )
+  }
+
+
   useEffect(() => {
     const offStart = window.api.onRecordStart(startRecording)
     const offStop = window.api.onRecordStop(stopRecording)
@@ -143,7 +174,7 @@ export default function App() {
         {tab === 'history' ? (
           <History newRecord={newRecord} />
         ) : (
-          <Settings />
+          <Settings onOpenSetup={() => setScreen('setup')} />
         )}
       </div>
 

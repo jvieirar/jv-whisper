@@ -7,6 +7,13 @@ import { randomUUID } from 'crypto'
 import { transcribeAudio, checkWhisperAvailable } from './transcriber'
 import { isOllamaRunning, getOllamaModels, runAdvancedParsing } from './ollama'
 import {
+  getSetupStatus,
+  createVenvAndInstall,
+  downloadModel as downloadWhisperModel,
+  findPythonSync,
+  getVenvPython
+} from './setup'
+import {
   saveTranscription,
   getTranscriptions,
   deleteTranscription,
@@ -95,6 +102,43 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('check-whisper', () => checkWhisperAvailable())
   ipcMain.handle('check-ollama', () => isOllamaRunning())
   ipcMain.handle('get-ollama-models', () => getOllamaModels())
+
+  // ── Setup / onboarding ────────────────────────────────────────────────────
+  ipcMain.handle('setup-status', () => getSetupStatus())
+
+  ipcMain.handle('setup-find-python', () => findPythonSync())
+
+  ipcMain.handle('setup-install', async (_e, pythonPath: string) => {
+    try {
+      await createVenvAndInstall(pythonPath, (msg, type) => {
+        mainWindow.webContents.send('setup-log', { msg, type })
+      })
+      // Auto-update the whisperPythonPath to our managed venv
+      setSetting('whisperPythonPath', getVenvPython())
+      mainWindow.webContents.send('setup-log', {
+        msg: '✓ Environment ready',
+        type: 'success'
+      })
+      return { ok: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      mainWindow.webContents.send('setup-log', { msg: `✕ ${message}`, type: 'error' })
+      return { ok: false, error: message }
+    }
+  })
+
+  ipcMain.handle('setup-download-model', async (_e, model: string) => {
+    try {
+      await downloadWhisperModel(model, (msg, type) => {
+        mainWindow.webContents.send('setup-log', { msg, type })
+      })
+      return { ok: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      mainWindow.webContents.send('setup-log', { msg: `✕ ${message}`, type: 'error' })
+      return { ok: false, error: message }
+    }
+  })
 
   // ── Hotkey events → renderer ───────────────────────────────────────────────
   shortcutEmitter.on('recordStart', () => {
