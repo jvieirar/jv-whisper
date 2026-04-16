@@ -105,6 +105,10 @@ const api = {
     const handler = (_e: Electron.IpcRendererEvent, msg: string) => cb(msg)
     ipcRenderer.on('transcription-error', handler)
     return () => ipcRenderer.off('transcription-error', handler)
+  },
+  onAccessibilityError: (cb: () => void) => {
+    ipcRenderer.on('accessibility-error', cb)
+    return () => ipcRenderer.off('accessibility-error', cb)
   }
 }
 

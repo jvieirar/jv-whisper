@@ -89,9 +89,14 @@ export function startShortcutListener(): void {
     pressedKeys.delete(e.keycode)
   })
 
-  uIOhook.start()
-  isListening = true
-  console.log('[shortcuts] Listening for hotkey:', getSetting('hotkey'))
+  try {
+    uIOhook.start()
+    isListening = true
+    console.log('[shortcuts] Listening for hotkey:', getSetting('hotkey'))
+  } catch (err) {
+    console.error('[shortcuts] Failed to start uiohook (Accessibility permission required):', err)
+    shortcutEmitter.emit('accessibilityError')
+  }
 }
 
 export function stopShortcutListener(): void {

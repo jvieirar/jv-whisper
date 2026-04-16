@@ -14,6 +14,7 @@ export default function App() {
   const [appState, setAppState] = useState<AppState>('idle')
   const [newRecord, setNewRecord] = useState<TranscriptionRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [accessibilityWarning, setAccessibilityWarning] = useState(false)
   const [screen, setScreen] = useState<Screen>('loading')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -33,10 +34,8 @@ export default function App() {
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
 
-      recorder.start(100) // collect chunks every 100ms
+      recorder.start(100)
       setAppState('recording')
-
-      // Play start sound
       playBeep(880, 80)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Microphone access denied'
@@ -58,7 +57,6 @@ export default function App() {
       recorder.stop()
     })
 
-    // Release mic
     stream?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
 
@@ -70,19 +68,45 @@ export default function App() {
       setError(result.error ?? 'Transcription failed')
       setAppState('idle')
     }
-    // transcription-complete event will handle the rest
   }, [])
 
   // Check setup status on launch
   useEffect(() => {
     window.api.setupStatus().then((status) => {
-      if (status.packagesInstalled) {
-        setScreen('app')
-      } else {
-        setScreen('setup')
-      }
+      setScreen(status.packagesInstalled ? 'app' : 'setup')
     })
   }, [])
+
+  // Wire up main-process events (always registered, regardless of screen)
+  useEffect(() => {
+    const offStart = window.api.onRecordStart(startRecording)
+    const offStop = window.api.onRecordStop(stopRecording)
+    const offProcEnd = window.api.onProcessingEnd(() => setAppState('idle'))
+
+    const offComplete = window.api.onTranscriptionComplete((record) => {
+      setNewRecord(record)
+      setAppState('idle')
+      setTab('history')
+    })
+
+    const offError = window.api.onTranscriptionError((msg) => {
+      setError(msg)
+      setAppState('idle')
+    })
+
+    const offAccess = window.api.onAccessibilityError(() => {
+      setAccessibilityWarning(true)
+    })
+
+    return () => {
+      offStart()
+      offStop()
+      offProcEnd()
+      offComplete()
+      offError()
+      offAccess()
+    }
+  }, [startRecording, stopRecording])
 
   if (screen === 'loading') {
     return (
@@ -100,32 +124,6 @@ export default function App() {
       />
     )
   }
-
-
-  useEffect(() => {
-    const offStart = window.api.onRecordStart(startRecording)
-    const offStop = window.api.onRecordStop(stopRecording)
-    const offProcEnd = window.api.onProcessingEnd(() => setAppState('idle'))
-
-    const offComplete = window.api.onTranscriptionComplete((record) => {
-      setNewRecord(record)
-      setAppState('idle')
-      setTab('history')
-    })
-
-    const offError = window.api.onTranscriptionError((msg) => {
-      setError(msg)
-      setAppState('idle')
-    })
-
-    return () => {
-      offStart()
-      offStop()
-      offProcEnd()
-      offComplete()
-      offError()
-    }
-  }, [startRecording, stopRecording])
 
   return (
     <div className="flex flex-col h-full bg-surface-900 text-gray-100 select-none overflow-hidden">
@@ -160,6 +158,22 @@ export default function App() {
           </span>
         </div>
       </div>
+
+      {/* Accessibility permission warning */}
+      {accessibilityWarning && (
+        <div className="mx-4 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-sm flex justify-between items-start gap-3">
+          <span>
+            <strong>⌨️ Hotkeys disabled</strong> — grant Accessibility permission to enable them.<br />
+            <span className="text-amber-400/70 text-xs">
+              System Settings → Privacy &amp; Security → Accessibility → enable jv-whisper (or Terminal)
+            </span>
+          </span>
+          <button
+            onClick={() => setAccessibilityWarning(false)}
+            className="text-amber-500 hover:text-amber-300 shrink-0"
+          >✕</button>
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (

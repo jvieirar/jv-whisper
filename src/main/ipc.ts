@@ -150,4 +150,8 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     mainWindow.webContents.send('record-stop')
     // tray state → 'processing' is set inside 'transcribe' handler
   })
+
+  shortcutEmitter.on('accessibilityError', () => {
+    mainWindow.webContents.send('accessibility-error')
+  })
 }
