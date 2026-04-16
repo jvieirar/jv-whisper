@@ -2,6 +2,7 @@ import { spawn } from 'child_process'
 import { join } from 'path'
 import { app } from 'electron'
 import { getSetting } from './store'
+import { AUGMENTED_PATH } from './utils'
 
 export interface TranscriptionResult {
   text: string
@@ -22,15 +23,9 @@ export async function transcribeAudio(audioFilePath: string): Promise<Transcript
 
     const start = Date.now()
     // Packaged app gets minimal PATH — add Homebrew/common paths so Python can find ffmpeg
-    const augmentedPath = [
-      process.env.PATH,
-      '/opt/homebrew/bin',
-      '/usr/local/bin',
-      '/opt/local/bin'
-    ].filter(Boolean).join(':')
     const env = {
       ...process.env,
-      PATH: augmentedPath,
+      PATH: AUGMENTED_PATH,
       ...(hfToken ? { HF_TOKEN: hfToken } : {})
     }
     const proc = spawn(pythonPath, [scriptPath, audioFilePath, model], { env })

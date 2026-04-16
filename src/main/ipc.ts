@@ -50,6 +50,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
           finalText = await runAdvancedParsing(result.text)
         } catch (err) {
           console.error('[ipc] Advanced parsing failed:', err)
+          mainWindow.webContents.send('advanced-parsing-failed', err instanceof Error ? err.message : 'Unknown error')
           // Fall back to raw whisper output
         }
       }

@@ -111,6 +111,11 @@ const api = {
     ipcRenderer.on('accessibility-error', cb)
     return () => ipcRenderer.off('accessibility-error', cb)
   },
+  onAdvancedParsingFailed: (cb: (msg: string) => void) => {
+    const handler = (_e: Electron.IpcRendererEvent, msg: string) => cb(msg)
+    ipcRenderer.on('advanced-parsing-failed', handler)
+    return () => ipcRenderer.off('advanced-parsing-failed', handler)
+  },
 
   // ── Hotkey capture ─────────────────────────────────────────────────────────
   startHotkeyCapture: () => ipcRenderer.invoke('start-hotkey-capture'),

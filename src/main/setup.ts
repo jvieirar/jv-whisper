@@ -2,6 +2,7 @@ import { spawn, execFileSync } from 'child_process'
 import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { app } from 'electron'
+import { AUGMENTED_PATH } from './utils'
 
 // All managed files live in ~/Library/Application Support/jv-whisper/
 export function getVenvDir(): string {
@@ -22,13 +23,7 @@ const PYTHON_CANDIDATES = [
 
 /** Env with augmented PATH so subprocesses can find ffmpeg, brew tools, etc. */
 function makeEnv(extra?: Record<string, string>): NodeJS.ProcessEnv {
-  const augmentedPath = [
-    process.env.PATH,
-    '/opt/homebrew/bin',
-    '/usr/local/bin',
-    '/opt/local/bin'
-  ].filter(Boolean).join(':')
-  return { ...process.env, PATH: augmentedPath, ...extra }
+  return { ...process.env, PATH: AUGMENTED_PATH, ...extra }
 }
 
 export interface SetupStatus {

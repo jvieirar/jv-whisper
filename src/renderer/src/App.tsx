@@ -15,6 +15,7 @@ export default function App() {
   const [newRecord, setNewRecord] = useState<TranscriptionRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [accessibilityWarning, setAccessibilityWarning] = useState(false)
+  const [parsingWarning, setParsingWarning] = useState<string | null>(null)
   const [screen, setScreen] = useState<Screen>('loading')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -70,6 +71,16 @@ export default function App() {
     }
   }, [])
 
+  // Stop mic/recorder on unmount to prevent the mic indicator staying "in use"
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      if (mediaRecorderRef.current?.state !== 'inactive') {
+        mediaRecorderRef.current?.stop()
+      }
+    }
+  }, [])
+
   // Check setup status on launch
   useEffect(() => {
     window.api.setupStatus().then((status) => {
@@ -98,6 +109,10 @@ export default function App() {
       setAccessibilityWarning(true)
     })
 
+    const offParsingFailed = window.api.onAdvancedParsingFailed((msg) => {
+      setParsingWarning(`Advanced parsing failed — showing raw transcript. ${msg}`)
+    })
+
     return () => {
       offStart()
       offStop()
@@ -105,6 +120,7 @@ export default function App() {
       offComplete()
       offError()
       offAccess()
+      offParsingFailed()
     }
   }, [startRecording, stopRecording])
 
@@ -170,6 +186,17 @@ export default function App() {
           </span>
           <button
             onClick={() => setAccessibilityWarning(false)}
+            className="text-amber-500 hover:text-amber-300 shrink-0"
+          >✕</button>
+        </div>
+      )}
+
+      {/* Advanced parsing warning banner */}
+      {parsingWarning && (
+        <div className="mx-4 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-sm flex justify-between items-start gap-3">
+          <span>⚠️ {parsingWarning}</span>
+          <button
+            onClick={() => setParsingWarning(null)}
             className="text-amber-500 hover:text-amber-300 shrink-0"
           >✕</button>
         </div>
