@@ -39,5 +39,43 @@
   },
   "trustedDependencies": [
     "uiohook-napi"
-  ]
+  ],
+  "build": {
+    "appId": "com.jvieira.jv-whisper",
+    "productName": "jv-whisper",
+    "extraResources": [
+      {
+        "from": "scripts",
+        "to": "scripts"
+      }
+    ],
+    "files": [
+      "out/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "hardenedRuntime": true,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "jv-whisper needs microphone access to record your voice for transcription.",
+        "NSAppleEventsUsageDescription": "jv-whisper uses Apple Events to paste transcribed text into the focused application."
+      }
+    },
+    "dmg": {
+      "title": "jv-whisper"
+    },
+    "asarUnpack": [
+      "node_modules/@libsql/**",
+      "node_modules/uiohook-napi/**"
+    ]
+  }
 }
