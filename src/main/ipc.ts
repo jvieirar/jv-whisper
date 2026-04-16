@@ -3,6 +3,7 @@ import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
+import { execFile } from 'child_process'
 
 import { transcribeAudio, checkWhisperAvailable } from './transcriber'
 import { isOllamaRunning, getOllamaModels, runAdvancedParsing } from './ollama'
@@ -22,7 +23,7 @@ import {
 } from './database'
 import { getSetting, setSetting, getAllSettings, Settings } from './store'
 import { shortcutEmitter, restartShortcutListener } from './shortcuts'
-import { setTrayState } from './tray'
+import { setTrayState, setLatestTranscription } from './tray'
 
 const SESSION_ID = randomUUID()
 
@@ -53,9 +54,23 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
         }
       }
 
-      if (getSetting('autoCopyToClipboard')) {
-        clipboard.writeText(finalText)
+      // Always paste into the currently focused input field:
+      // save current clipboard → set transcription → Cmd+V → restore (unless user wants to keep it)
+      const previousClipboard = clipboard.readText()
+      clipboard.writeText(finalText)
+      await new Promise<void>((res) =>
+        execFile(
+          'osascript',
+          ['-e', 'tell application "System Events" to keystroke "v" using {command down}'],
+          () => res()
+        )
+      )
+      if (!getSetting('autoCopyToClipboard')) {
+        // Small delay so the paste lands before we restore
+        setTimeout(() => clipboard.writeText(previousClipboard), 200)
       }
+
+      setLatestTranscription(finalText)
 
       const record = await saveTranscription({
         text: finalText,

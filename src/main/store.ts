@@ -21,7 +21,7 @@ const defaults: Settings = {
   advancedParsingEnabled: false,
   advancedParsingModel: '',
   soundEnabled: true,
-  autoCopyToClipboard: true,
+  autoCopyToClipboard: false,
   theme: 'system',
   hfToken: ''
 }

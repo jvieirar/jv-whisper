@@ -140,7 +140,10 @@ export default function Settings({ onOpenSetup }: Props) {
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="text-sm text-gray-200">Auto-copy to clipboard</label>
+            <div>
+              <label className="text-sm text-gray-200">Keep in clipboard after pasting</label>
+              <p className="text-xs text-gray-500 mt-0.5">Text is always pasted into the focused field. Enable to also keep it in clipboard.</p>
+            </div>
             <Toggle
               value={settings.autoCopyToClipboard}
               onChange={(v) => updateSetting('autoCopyToClipboard', v)}
