@@ -1,0 +1,12 @@
+node_modules/
+out/
+dist/
+.DS_Store
+*.tgz
+*.log
+
+# Temp audio files
+/tmp/jv-whisper/
+
+# Models (large, download separately)
+assets/models/
