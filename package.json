@@ -11,7 +11,8 @@
     "preview": "electron-vite preview",
     "package": "bun run build && electron-builder",
     "package:mac": "bun run build && electron-builder --mac --arm64",
-    "package:mac:universal": "bun run build && electron-builder --mac --universal"
+    "package:mac:universal": "bun run build && electron-builder --mac --universal",
+    "package:mac:quick": "bun run build && electron-builder --mac --arm64 --dir"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
@@ -21,7 +22,6 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "@electron/rebuild": "^4.0.3",
     "@types/node": "^22.19.17",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
