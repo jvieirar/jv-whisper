@@ -57,7 +57,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
         clipboard.writeText(finalText)
       }
 
-      const record = saveTranscription({
+      const record = await saveTranscription({
         text: finalText,
         raw_text: result.text,
         model: getSetting('whisperModel'),

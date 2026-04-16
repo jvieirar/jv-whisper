@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3'
+import { createClient, type Client } from '@libsql/client'
 import { app } from 'electron'
 import { join } from 'path'
 
@@ -13,13 +13,13 @@ export interface TranscriptionRecord {
   session_id: string
 }
 
-let db: Database.Database
+let db: Client
 
-export function initDatabase(): void {
+export async function initDatabase(): Promise<void> {
   const dbPath = join(app.getPath('userData'), 'history.db')
-  db = new Database(dbPath)
+  db = createClient({ url: `file:${dbPath}` })
 
-  db.exec(`
+  await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS transcriptions (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       text          TEXT    NOT NULL,
@@ -35,39 +35,50 @@ export function initDatabase(): void {
   `)
 }
 
-export function saveTranscription(
+export async function saveTranscription(
   record: Omit<TranscriptionRecord, 'id' | 'created_at'>
-): TranscriptionRecord {
-  const stmt = db.prepare(`
-    INSERT INTO transcriptions (text, raw_text, model, duration_ms, advanced_parsing, session_id)
-    VALUES (@text, @raw_text, @model, @duration_ms, @advanced_parsing, @session_id)
-  `)
-  const result = stmt.run(record)
-  return getTranscriptionById(result.lastInsertRowid as number)!
+): Promise<TranscriptionRecord> {
+  const result = await db.execute({
+    sql: `INSERT INTO transcriptions (text, raw_text, model, duration_ms, advanced_parsing, session_id)
+          VALUES (:text, :raw_text, :model, :duration_ms, :advanced_parsing, :session_id)`,
+    args: record as Record<string, string | number>
+  })
+  return (await getTranscriptionById(Number(result.lastInsertRowid)))!
 }
 
-export function getTranscriptions(limit = 100, offset = 0): TranscriptionRecord[] {
-  return db
-    .prepare('SELECT * FROM transcriptions ORDER BY created_at DESC LIMIT ? OFFSET ?')
-    .all(limit, offset) as TranscriptionRecord[]
+export async function getTranscriptions(
+  limit = 100,
+  offset = 0
+): Promise<TranscriptionRecord[]> {
+  const result = await db.execute({
+    sql: 'SELECT * FROM transcriptions ORDER BY created_at DESC LIMIT ? OFFSET ?',
+    args: [limit, offset]
+  })
+  return result.rows as unknown as TranscriptionRecord[]
 }
 
-export function getTranscriptionById(id: number): TranscriptionRecord | undefined {
-  return db
-    .prepare('SELECT * FROM transcriptions WHERE id = ?')
-    .get(id) as TranscriptionRecord | undefined
+export async function getTranscriptionById(
+  id: number
+): Promise<TranscriptionRecord | undefined> {
+  const result = await db.execute({
+    sql: 'SELECT * FROM transcriptions WHERE id = ?',
+    args: [id]
+  })
+  return result.rows[0] as unknown as TranscriptionRecord | undefined
 }
 
-export function deleteTranscription(id: number): void {
-  db.prepare('DELETE FROM transcriptions WHERE id = ?').run(id)
+export async function deleteTranscription(id: number): Promise<void> {
+  await db.execute({ sql: 'DELETE FROM transcriptions WHERE id = ?', args: [id] })
 }
 
-export function clearHistory(): void {
-  db.exec('DELETE FROM transcriptions')
+export async function clearHistory(): Promise<void> {
+  await db.execute('DELETE FROM transcriptions')
 }
 
-export function searchTranscriptions(query: string): TranscriptionRecord[] {
-  return db
-    .prepare("SELECT * FROM transcriptions WHERE text LIKE ? ORDER BY created_at DESC LIMIT 50")
-    .all(`%${query}%`) as TranscriptionRecord[]
+export async function searchTranscriptions(query: string): Promise<TranscriptionRecord[]> {
+  const result = await db.execute({
+    sql: 'SELECT * FROM transcriptions WHERE text LIKE ? ORDER BY created_at DESC LIMIT 50',
+    args: [`%${query}%`]
+  })
+  return result.rows as unknown as TranscriptionRecord[]
 }

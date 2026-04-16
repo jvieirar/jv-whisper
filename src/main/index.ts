@@ -15,9 +15,9 @@ if (!app.requestSingleInstanceLock()) {
 // Hide from dock — this is a menu bar app
 app.dock?.hide()
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   initStore()
-  initDatabase()
+  await initDatabase()
 
   const mainWindow = createMainWindow()
 
