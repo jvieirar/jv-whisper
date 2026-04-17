@@ -9,6 +9,8 @@ jobs:
   build-macos:
     name: Build macOS (.dmg)
     runs-on: macos-15  # Apple Silicon
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
