@@ -4,8 +4,6 @@ import { getSetting } from './store'
 // Lazily required so app doesn't crash if uiohook-napi fails to load
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let uIOhook: any = null
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let UiohookKey: any = null
 
 export const shortcutEmitter = new EventEmitter()
 
@@ -65,7 +63,6 @@ const MODIFIER_ALIASES: Record<number, string> = {
   3676: 'Control', // Right Ctrl
   54: 'Shift',     // Right Shift
   3640: 'Alt',     // Right Alt (AltGr)
-  3676: 'Meta'     // Right Meta (some keyboards)
 }
 
 const MODIFIER_ORDER = ['Control', 'Shift', 'Alt', 'Meta']
@@ -109,7 +106,6 @@ export function startShortcutListener(): void {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const hook = require('uiohook-napi')
     uIOhook = hook.uIOhook
-    UiohookKey = hook.UiohookKey
   } catch (err) {
     console.error('[shortcuts] uiohook-napi failed to load:', err)
     console.error('[shortcuts] Global hotkeys will not work. Run: npm install')

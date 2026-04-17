@@ -43,7 +43,7 @@ app.whenReady().then(async () => {
 })
 
 // Keep alive when all windows are closed (tray app behavior)
-app.on('window-all-closed', (e: Event) => e.preventDefault())
+app.on('window-all-closed', () => {})
 
 app.on('second-instance', () => {
   // If user tries to open a second instance, focus existing window
