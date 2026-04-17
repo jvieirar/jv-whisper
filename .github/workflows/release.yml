@@ -19,7 +19,7 @@ jobs:
         run: bun install
 
       - name: Build app
-        run: bun run package:mac
+        run: bun run build && electron-builder --mac --arm64 --publish never
         env:
           # Skip code signing — produces an unsigned .dmg
           # Users can open it via right-click → Open on first launch
