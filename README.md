@@ -37,7 +37,7 @@ brew install ffmpeg
 
 ### 4. pip packages for transcription
 ```bash
-pip install mlx-whisper soundfile
+pip install -r requirements.txt
 ```
 
 > **Note:** `mlx-whisper` uses Apple's [MLX framework](https://github.com/ml-explore/mlx) — it's heavily optimized for Apple Silicon (M1/M2/M3/M4). On Intel Macs, use `openai-whisper` instead and update the `scripts/transcribe.py` import accordingly.
@@ -48,7 +48,7 @@ pip install mlx-whisper soundfile
 
 ```bash
 # Clone the repo
-git clone <your-repo-url> jv-whisper
+git clone https://github.com/jvieirar/jv-whisper jv-whisper
 cd jv-whisper
 
 # Install Node dependencies
