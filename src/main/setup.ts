@@ -1,6 +1,7 @@
 import { spawn, execFileSync } from 'child_process'
 import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import { homedir } from 'os'
 import { app } from 'electron'
 import { AUGMENTED_PATH } from './utils'
 
@@ -166,4 +167,17 @@ export function downloadModel(model: string, onLog: LogCallback): Promise<void> 
       }
     })
   })
+}
+
+/**
+ * Returns true if the model directory exists in the local HuggingFace cache.
+ * HF stores models at ~/.cache/huggingface/hub/models--{org}--{name}
+ * e.g. mlx-community/whisper-base-mlx → models--mlx-community--whisper-base-mlx
+ */
+export function isModelDownloaded(modelId: string): boolean {
+  const cacheDir = join(homedir(), '.cache', 'huggingface', 'hub')
+  const modelDir = join(cacheDir, 'models--' + modelId.replaceAll('/', '--'))
+  if (!existsSync(modelDir)) return false
+  // HF creates modelDir at download start; snapshots/ only appears after successful completion
+  return existsSync(join(modelDir, 'snapshots'))
 }

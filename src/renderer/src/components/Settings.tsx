@@ -96,6 +96,12 @@ function HotkeyRecorder({
   )
 }
 
+const PRESET_MODELS = [
+  'mlx-community/whisper-tiny-mlx',
+  'mlx-community/whisper-base-mlx',
+  'mlx-community/whisper-large-v3-turbo'
+] as const
+
 type CheckState = 'idle' | 'checking' | 'ok' | 'error'
 
 interface StatusBadgeProps {
@@ -129,9 +135,23 @@ export default function Settings({ onOpenSetup }: Props) {
   const [ollamaStatus, setOllamaStatus] = useState<CheckState>('idle')
   const [ollamaModels, setOllamaModels] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
+  const [modelStatuses, setModelStatuses] = useState<Record<string, boolean | undefined>>({})
+  const [downloadingModel, setDownloadingModel] = useState<string | null>(null)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
 
   useEffect(() => {
     window.api.getSettings().then(setSettings)
+  }, [])
+
+  useEffect(() => {
+    Promise.all(
+      PRESET_MODELS.map(async (m) => {
+        const { downloaded } = await window.api.getModelStatus(m)
+        return [m, downloaded] as const
+      })
+    ).then((results) => {
+      setModelStatuses(Object.fromEntries(results))
+    })
   }, [])
 
   const updateSetting = useCallback(
@@ -143,6 +163,20 @@ export default function Settings({ onOpenSetup }: Props) {
     },
     []
   )
+
+  const handleDownloadModel = async (model: string) => {
+    if (downloadingModel !== null) return  // already downloading
+    setDownloadError(null)
+    setDownloadingModel(model)
+    const result = await window.api.downloadModel(model)
+    if (result.ok) {
+      setModelStatuses((prev) => ({ ...prev, [model]: true }))
+      updateSetting('whisperModel', model)
+    } else {
+      setDownloadError(result.error ?? 'Download failed')
+    }
+    setDownloadingModel(null)
+  }
 
   const checkWhisper = async () => {
     setWhisperStatus('checking')
@@ -257,31 +291,64 @@ export default function Settings({ onOpenSetup }: Props) {
               <p className="text-xs text-gray-600 mt-0.5">
                 HuggingFace repo ID. Downloaded on first use.
               </p>
-              <input
-                type="text"
-                value={settings.whisperModel}
-                onChange={(e) => updateSetting('whisperModel', e.target.value)}
-                className="mt-2 w-full bg-surface-700 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-white/25 font-mono"
-              />
-              <div className="mt-1 flex gap-2 flex-wrap">
-                {[
-                  'mlx-community/whisper-tiny-mlx',
-                  'mlx-community/whisper-base-mlx',
-                  'mlx-community/whisper-large-v3-turbo'
-                ].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => updateSetting('whisperModel', m)}
-                    className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
-                      settings.whisperModel === m
-                        ? 'border-white/25 text-gray-300 bg-white/8'
-                        : 'border-white/8 text-gray-600 hover:text-gray-400 hover:border-white/15'
-                    }`}
-                  >
-                    {m.split('/')[1].replace('whisper-', '').replace('-mlx', '')}
-                  </button>
-                ))}
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  value={settings.whisperModel}
+                  onChange={(e) => updateSetting('whisperModel', e.target.value)}
+                  className="flex-1 bg-surface-700 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-white/25 font-mono"
+                />
+                {settings.whisperModel &&
+                  !(PRESET_MODELS as readonly string[]).includes(settings.whisperModel) && (
+                    <button
+                      onClick={() => handleDownloadModel(settings.whisperModel)}
+                      disabled={downloadingModel === settings.whisperModel}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all disabled:opacity-50 shrink-0"
+                    >
+                      {downloadingModel === settings.whisperModel ? '⏳' : 'Download'}
+                    </button>
+                  )}
               </div>
+              <div className="mt-1 flex gap-2 flex-wrap">
+                {PRESET_MODELS.map((m) => {
+                  const statusKnown = m in modelStatuses
+                  const isDownloaded = modelStatuses[m]
+                  const isDownloading = downloadingModel === m
+                  const label = m.split('/')[1].replace('whisper-', '').replace('-mlx', '')
+                  return (
+                    <div key={m} className="flex items-center gap-1">
+                      <button
+                        onClick={() => updateSetting('whisperModel', m)}
+                        className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
+                          settings.whisperModel === m
+                            ? 'border-white/25 text-gray-300 bg-white/8'
+                            : 'border-white/8 text-gray-600 hover:text-gray-400 hover:border-white/15'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                      {!statusKnown ? (
+                        <span className="text-[10px] text-gray-600">…</span>
+                      ) : isDownloaded ? (
+                        <span className="text-[10px] text-green-500/80" title="Downloaded">✓</span>
+                      ) : isDownloading ? (
+                        <span className="text-[10px] text-amber-400" title="Downloading…">⏳</span>
+                      ) : (
+                        <button
+                          onClick={() => handleDownloadModel(m)}
+                          className="text-[10px] text-blue-400/80 hover:text-blue-300 underline transition-colors"
+                          title={`Download ${label}`}
+                        >
+                          dl
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              {downloadError && (
+                <p className="text-xs text-red-400 mt-1">⚠️ {downloadError}</p>
+              )}
             </div>
           </div>
 

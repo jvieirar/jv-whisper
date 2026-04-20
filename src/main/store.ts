@@ -16,7 +16,7 @@ export interface Settings {
 const defaults: Settings = {
   hotkey: 'Control+Space',
   hotkeySwitchMode: 'hold',
-  whisperModel: 'mlx-community/whisper-large-v3-turbo',
+  whisperModel: '',
   whisperPythonPath: 'python3',
   advancedParsingEnabled: false,
   advancedParsingModel: '',

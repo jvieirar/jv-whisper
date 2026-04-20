@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, clipboard, shell, nativeTheme } from 'electron'
+import { ipcMain, BrowserWindow, clipboard, shell, nativeTheme, Notification, app } from 'electron'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -12,7 +12,8 @@ import {
   createVenvAndInstall,
   downloadModel as downloadWhisperModel,
   findPythonSync,
-  getVenvPython
+  getVenvPython,
+  isModelDownloaded
 } from './setup'
 import {
   saveTranscription,
@@ -128,6 +129,31 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('check-ollama', () => isOllamaRunning())
   ipcMain.handle('get-ollama-models', () => getOllamaModels())
 
+  ipcMain.handle('check-model-ready', () => {
+    const model = getSetting('whisperModel')
+    const configured = model !== ''
+    const downloaded = configured && isModelDownloaded(model)
+    return { configured, downloaded }
+  })
+
+  ipcMain.handle('get-model-status', (_e, modelId: string) => {
+    return { downloaded: isModelDownloaded(modelId) }
+  })
+
+  ipcMain.handle('download-model', async (_e, model: string) => {
+    // Intentionally does not update whisperModel setting — the user selects the
+    // active model separately. This handler only pre-downloads to the HF cache.
+    try {
+      await downloadWhisperModel(model, (msg, type) => {
+        mainWindow.webContents.send('setup-log', { msg, type })
+      })
+      return { ok: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return { ok: false, error: message }
+    }
+  })
+
   // ── Setup / onboarding ────────────────────────────────────────────────────
   ipcMain.handle('setup-status', () => getSetupStatus())
 
@@ -157,6 +183,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       await downloadWhisperModel(model, (msg, type) => {
         mainWindow.webContents.send('setup-log', { msg, type })
       })
+      setSetting('whisperModel', model)
       return { ok: true }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -167,6 +194,23 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
 
   // ── Hotkey events → renderer ───────────────────────────────────────────────
   shortcutEmitter.on('recordStart', () => {
+    const model = getSetting('whisperModel')
+    const configured = model !== ''
+    const downloaded = configured && isModelDownloaded(model)
+
+    if (!configured || !downloaded) {
+      new Notification({
+        title: 'jv-whisper',
+        body: configured
+          ? `Model "${model}" is not downloaded yet. Open the app to download it.`
+          : 'No Whisper model configured. Open the app to set one up.'
+      }).show()
+      app.focus({ steal: true })
+      mainWindow.show()
+      mainWindow.focus()
+      return
+    }
+
     setTrayState('recording')
     mainWindow.webContents.send('record-start')
   })

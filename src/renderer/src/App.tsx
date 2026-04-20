@@ -17,6 +17,7 @@ export default function App() {
   const [accessibilityWarning, setAccessibilityWarning] = useState(false)
   const [pasteWarning, setPasteWarning] = useState<string | null>(null)
   const [parsingWarning, setParsingWarning] = useState<string | null>(null)
+  const [modelReady, setModelReady] = useState(true) // optimistic — avoids flash on launch
   const [screen, setScreen] = useState<Screen>('loading')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -43,6 +44,15 @@ export default function App() {
       const msg = err instanceof Error ? err.message : 'Microphone access denied'
       setError(msg)
       setAppState('idle')
+    }
+  }, [])
+
+  const checkModelReady = useCallback(async () => {
+    try {
+      const status = await window.api.checkModelReady()
+      setModelReady(status.configured && status.downloaded)
+    } catch {
+      setModelReady(false)
     }
   }, [])
 
@@ -91,10 +101,22 @@ export default function App() {
 
   // Check setup status on launch
   useEffect(() => {
-    window.api.setupStatus().then((status) => {
-      setScreen(status.packagesInstalled ? 'app' : 'setup')
+    window.api.setupStatus().then(async (status) => {
+      if (status.packagesInstalled) {
+        setScreen('app')
+        await checkModelReady()
+      } else {
+        setScreen('setup')
+      }
     })
-  }, [])
+  }, [checkModelReady])
+
+  // Re-check model readiness when leaving Settings tab
+  useEffect(() => {
+    if (tab === 'history' && screen === 'app') {
+      checkModelReady()
+    }
+  }, [tab, checkModelReady]) // screen guards the check but is not a trigger
 
   // Wire up main-process events (always registered, regardless of screen)
   useEffect(() => {
@@ -213,6 +235,22 @@ export default function App() {
             onClick={() => setAccessibilityWarning(false)}
             className="text-amber-500 hover:text-amber-300 shrink-0"
           >✕</button>
+        </div>
+      )}
+
+      {/* Model not ready warning */}
+      {!modelReady && screen === 'app' && (
+        <div className="mx-4 mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-sm flex items-start gap-3">
+          <span>
+            <strong>⚠️ No Whisper model configured.</strong>{' '}
+            <button
+              onClick={() => setTab('settings')}
+              className="underline hover:text-amber-200 transition-colors"
+            >
+              Go to Settings → Transcription
+            </button>{' '}
+            to download one.
+          </span>
         </div>
       )}
 
