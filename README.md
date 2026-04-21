@@ -82,6 +82,14 @@ macOS will prompt you automatically on first recording attempt. If it doesn't:
 
 Without this, the global hotkey **will not work**.
 
+> **After every rebuild / fresh package:** because the app is ad-hoc signed, macOS
+> treats each new build as a new app and revokes the Accessibility grant. Reset TCC
+> so the permission prompt reappears cleanly, then re-grant:
+>
+> ```bash
+> tccutil reset Accessibility com.jvieira.jv-whisper
+> ```
+
 ---
 
 ## Downloading Whisper Models
@@ -213,6 +221,12 @@ jv-whisper/
 - Grant **Accessibility** permission (System Settings → Privacy & Security → Accessibility)
 - In dev mode, add **Electron** to Accessibility; in production, add **jv-whisper**
 - Restart the app after granting permission
+- If you just rebuilt/repackaged and the hotkey silently stops working, macOS has
+  invalidated the prior grant (ad-hoc signature changed). Run:
+  ```bash
+  tccutil reset Accessibility com.jvieira.jv-whisper
+  ```
+  then relaunch and accept the prompt.
 
 ### "Python not found" error
 - Open **Settings → Transcription → Python path**

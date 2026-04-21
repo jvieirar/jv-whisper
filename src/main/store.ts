@@ -11,19 +11,21 @@ export interface Settings {
   autoCopyToClipboard: boolean
   theme: 'system' | 'light' | 'dark'
   hfToken: string
+  microphoneId: string
 }
 
 const defaults: Settings = {
   hotkey: 'Control+Space',
   hotkeySwitchMode: 'hold',
-  whisperModel: 'mlx-community/whisper-large-v3-turbo',
+  whisperModel: '',
   whisperPythonPath: 'python3',
   advancedParsingEnabled: false,
   advancedParsingModel: '',
   soundEnabled: true,
   autoCopyToClipboard: false,
   theme: 'system',
-  hfToken: ''
+  hfToken: '',
+  microphoneId: ''
 }
 
 let store: ElectronStore<Settings>
@@ -55,6 +57,7 @@ export function getAllSettings(): Settings {
     soundEnabled: store.get('soundEnabled'),
     autoCopyToClipboard: store.get('autoCopyToClipboard'),
     theme: store.get('theme'),
-    hfToken: store.get('hfToken')
+    hfToken: store.get('hfToken'),
+    microphoneId: store.get('microphoneId')
   }
 }

@@ -22,6 +22,7 @@ export interface Settings {
   autoCopyToClipboard: boolean
   theme: 'system' | 'light' | 'dark'
   hfToken: string
+  microphoneId: string
 }
 
 const api = {
@@ -54,6 +55,15 @@ const api = {
     ipcRenderer.invoke('check-ollama'),
   getOllamaModels: (): Promise<Array<{ name: string; size: number; modified_at: string }>> =>
     ipcRenderer.invoke('get-ollama-models'),
+
+  checkModelReady: (): Promise<{ configured: boolean; downloaded: boolean }> =>
+    ipcRenderer.invoke('check-model-ready'),
+
+  getModelStatus: (modelId: string): Promise<{ downloaded: boolean }> =>
+    ipcRenderer.invoke('get-model-status', modelId),
+
+  downloadModel: (model: string): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('download-model', model),
 
   // ── Setup ──────────────────────────────────────────────────────────────────
   setupStatus: (): Promise<{
