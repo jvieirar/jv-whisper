@@ -42,6 +42,8 @@ pip install -r requirements.txt
 
 > **Note:** `mlx-whisper` uses Apple's [MLX framework](https://github.com/ml-explore/mlx) — it's heavily optimized for Apple Silicon (M1/M2/M3/M4). On Intel Macs, use `openai-whisper` instead and update the `scripts/transcribe.py` import accordingly.
 
+> **Windows / Linux:** Not yet supported. The planned path is [whisper.cpp](https://github.com/ggerganov/whisper.cpp) — a pure C++ inference engine that requires no Python runtime and is easy to distribute cross-platform. See `docs/port_to_wind_linx.md` for the porting plan.
+
 ---
 
 ## Installation
@@ -161,6 +163,25 @@ Then in the app:
 5. Done — every transcription will be post-processed
 
 > ⚡ Adds ~2–5s per transcription depending on model size.
+
+---
+
+## macOS Security Warning (First Launch)
+
+When opening the `.dmg` for the first time, macOS may show:
+> *"jv-whisper" cannot be opened because Apple could not verify it is free of malware.*
+
+This is expected — the app is not notarized (requires a paid Apple Developer account). To open it:
+
+**Option 1 — Right-click:**
+Right-click the app → **Open** → click **Open** in the dialog.
+
+**Option 2 — Remove quarantine flag (if Option 1 is blocked by MDM):**
+```bash
+sudo xattr -dr com.apple.quarantine /Applications/jv-whisper.app
+```
+
+Then launch normally. On company-managed Macs, Option 2 typically works if you have local admin / sudo access.
 
 ---
 
