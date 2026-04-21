@@ -22,6 +22,7 @@ export interface Settings {
   autoCopyToClipboard: boolean
   theme: 'system' | 'light' | 'dark'
   hfToken: string
+  microphoneId: string
 }
 
 const api = {

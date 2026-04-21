@@ -11,6 +11,7 @@ export interface Settings {
   autoCopyToClipboard: boolean
   theme: 'system' | 'light' | 'dark'
   hfToken: string
+  microphoneId: string
 }
 
 const defaults: Settings = {
@@ -23,7 +24,8 @@ const defaults: Settings = {
   soundEnabled: true,
   autoCopyToClipboard: false,
   theme: 'system',
-  hfToken: ''
+  hfToken: '',
+  microphoneId: ''
 }
 
 let store: ElectronStore<Settings>
@@ -55,6 +57,7 @@ export function getAllSettings(): Settings {
     soundEnabled: store.get('soundEnabled'),
     autoCopyToClipboard: store.get('autoCopyToClipboard'),
     theme: store.get('theme'),
-    hfToken: store.get('hfToken')
+    hfToken: store.get('hfToken'),
+    microphoneId: store.get('microphoneId')
   }
 }

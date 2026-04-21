@@ -96,6 +96,164 @@ function HotkeyRecorder({
   )
 }
 
+// ── Microphone picker ──────────────────────────────────────────────────────
+function MicrophonePicker({
+  value,
+  onChange
+}: {
+  value: string
+  onChange: (deviceId: string) => void
+}) {
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
+  const [needsPermission, setNeedsPermission] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [level, setLevel] = useState(0)
+  const [testError, setTestError] = useState<string | null>(null)
+  const stopTestRef = useRef<(() => void) | null>(null)
+
+  const refreshDevices = useCallback(async () => {
+    const list = await navigator.mediaDevices.enumerateDevices()
+    const inputs = list.filter((d) => d.kind === 'audioinput')
+    setDevices(inputs)
+    // Labels are empty until mic permission has been granted at least once
+    setNeedsPermission(inputs.length > 0 && inputs.every((d) => !d.label))
+  }, [])
+
+  useEffect(() => {
+    refreshDevices()
+    const handler = () => refreshDevices()
+    navigator.mediaDevices.addEventListener('devicechange', handler)
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', handler)
+      stopTestRef.current?.()
+    }
+  }, [refreshDevices])
+
+  const requestPermission = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true })
+      s.getTracks().forEach((t) => t.stop())
+      await refreshDevices()
+    } catch {
+      // User denied — leave as-is
+    }
+  }
+
+  const startTest = async () => {
+    setTestError(null)
+    try {
+      const constraints: MediaTrackConstraints | true = value
+        ? { deviceId: { exact: value } }
+        : true
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: constraints })
+      const ctx = new AudioContext()
+      const source = ctx.createMediaStreamSource(stream)
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 512
+      source.connect(analyser)
+      const buf = new Uint8Array(analyser.fftSize)
+
+      let raf = 0
+      const tick = () => {
+        analyser.getByteTimeDomainData(buf)
+        // Peak deviation from 128 (silence midpoint)
+        let peak = 0
+        for (let i = 0; i < buf.length; i++) {
+          const v = Math.abs(buf[i] - 128)
+          if (v > peak) peak = v
+        }
+        setLevel(Math.min(1, peak / 128))
+        raf = requestAnimationFrame(tick)
+      }
+      tick()
+      setTesting(true)
+
+      const stop = () => {
+        cancelAnimationFrame(raf)
+        stream.getTracks().forEach((t) => t.stop())
+        ctx.close()
+        setTesting(false)
+        setLevel(0)
+        stopTestRef.current = null
+      }
+      stopTestRef.current = stop
+      // Auto-stop after 5s
+      setTimeout(() => stopTestRef.current?.(), 5000)
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : 'Could not open microphone')
+    }
+  }
+
+  const stopTest = () => stopTestRef.current?.()
+
+  if (needsPermission) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-gray-500">
+          Grant microphone access to see your input devices.
+        </p>
+        <button
+          onClick={requestPermission}
+          className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-all"
+        >
+          Grant microphone access
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2 items-center">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 bg-surface-700 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-white/25"
+        >
+          <option value="">System default</option>
+          {devices.map((d) => (
+            <option key={d.deviceId} value={d.deviceId}>
+              {d.label || `Microphone ${d.deviceId.slice(0, 6)}`}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={testing ? stopTest : startTest}
+          className={`text-xs px-3 py-1.5 rounded-lg transition-all shrink-0 ${
+            testing
+              ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300'
+              : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'
+          }`}
+        >
+          {testing ? 'Stop' : 'Test'}
+        </button>
+      </div>
+
+      {testing && (
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-2 rounded-full bg-surface-700 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-green-500 via-amber-400 to-red-500 transition-[width] duration-75"
+              style={{ width: `${Math.round(level * 100)}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-gray-500 font-mono w-8 text-right">
+            {Math.round(level * 100)}%
+          </span>
+        </div>
+      )}
+
+      {!testing && (
+        <p className="text-[11px] text-gray-600">
+          Click <strong>Test</strong> and speak — the bar should respond to your voice.
+        </p>
+      )}
+
+      {testError && <p className="text-xs text-red-400">⚠️ {testError}</p>}
+    </div>
+  )
+}
+
 const PRESET_MODELS = [
   'mlx-community/whisper-tiny-mlx',
   'mlx-community/whisper-base-mlx',
@@ -221,6 +379,17 @@ export default function Settings({ onOpenSetup }: Props) {
           Recording
         </h2>
         <div className="glass rounded-xl p-4 space-y-4">
+          <div>
+            <label className="text-sm text-gray-200">Microphone</label>
+            <p className="text-xs text-gray-600 mt-0.5 mb-2">
+              Input device used for recording. Falls back to system default if disconnected.
+            </p>
+            <MicrophonePicker
+              value={settings.microphoneId}
+              onChange={(id) => updateSetting('microphoneId', id)}
+            />
+          </div>
+
           <div className="flex items-center justify-between">
             <div>
               <label className="text-sm text-gray-200">Hotkey</label>

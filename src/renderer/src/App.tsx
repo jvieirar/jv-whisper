@@ -26,7 +26,21 @@ export default function App() {
   const startRecording = useCallback(async () => {
     try {
       setError(null)
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const settings = await window.api.getSettings()
+      const audioConstraints: MediaTrackConstraints | true = settings.microphoneId
+        ? { deviceId: { exact: settings.microphoneId } }
+        : true
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
+      } catch (err) {
+        // Saved device disappeared — fall back to system default
+        if (settings.microphoneId) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        } else {
+          throw err
+        }
+      }
       streamRef.current = stream
       chunksRef.current = []
 

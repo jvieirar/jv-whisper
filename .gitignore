@@ -6,6 +6,7 @@ dist/
 .DS_Store
 *.tgz
 *.log
+*.tsbuildinfo
 
 # Temp audio files
 /tmp/jv-whisper/
